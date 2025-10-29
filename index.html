@@ -6,7 +6,6 @@
   <title>Lorel着メロ</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* カードデザイン（既存CSSを簡易化） */
     body {
       font-family: 'Arial', sans-serif;
       background-color: #121212;
@@ -19,16 +18,42 @@
     .track-card { background-color: #1e1e1e; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; align-items: center; }
     .track-card img { width: 100%; max-width: 250px; border-radius: 8px; margin-bottom: 10px; }
     .track-card h2 { font-size: 1.2rem; margin: 10px 0; color: #ff9900; }
-    .track-card button {
+    .play-btn {
       background-color: #ff6600; color: #fff; border: none; border-radius: 5px; padding: 8px 15px; cursor: pointer;
-      margin-bottom: 5px;
+      margin-bottom: 10px;
     }
-    .track-card button:hover { background-color: #ff9900; }
+    .play-btn:hover { background-color: #ff9900; }
     .track-card a {
       text-decoration: none; color: #fff; background-color: #ff6600; padding: 8px 15px; border-radius: 5px;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s; margin-top: 5px;
     }
     .track-card a:hover { background-color: #ff9900; }
+
+    /* 再生バー */
+    .progress-container {
+      width: 100%;
+      background-color: #333;
+      border-radius: 5px;
+      overflow: hidden;
+      height: 8px;
+      margin-bottom: 5px;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #ff6600, #ff9900);
+      transition: width 0.1s linear;
+    }
+
+    /* 再生中アニメーション */
+    .playing .play-btn {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
   </style>
 </head>
 <body>
@@ -40,8 +65,8 @@
   <div class="track-card">
     <img src="images/jacket1.png" alt="デモ曲1 ジャケット">
     <h2>ANEMONE</h2>
-    <!-- カスタムプレイヤー -->
     <button class="play-btn" data-audio="audio/ANEMONE.mp3">再生</button>
+    <div class="progress-container"><div class="progress-bar"></div></div>
     <a href="https://drive.google.com/file/d/12kXqC__JQ9gWKqQYz8w7mTvuyQvNk3FA/view?usp=sharing" target="_blank">ダウンロード</a>
   </div>
 
@@ -50,6 +75,7 @@
     <img src="images/jacket2.png" alt="デモ曲2 ジャケット">
     <h2>DOLL</h2>
     <button class="play-btn" data-audio="audio/DOLL.mp3">再生</button>
+    <div class="progress-container"><div class="progress-bar"></div></div>
     <a href="https://drive.google.com/file/d/1CRmlaxVRjxNdLbzwZYaKF6rOZX-WfLSE/view?usp=sharing" target="_blank">ダウンロード</a>
   </div>
 
@@ -58,6 +84,7 @@
     <img src="images/jacket3.png" alt="デモ曲3 ジャケット">
     <h2>SAUVAGE</h2>
     <button class="play-btn" data-audio="audio/SAUVAGE.mp3">再生</button>
+    <div class="progress-container"><div class="progress-bar"></div></div>
     <a href="https://drive.google.com/file/d/14nFDbRkTMIHFSPg481PtgXY2Ww00Tiqk/view?usp=sharing" target="_blank">ダウンロード</a>
   </div>
 
@@ -66,47 +93,55 @@
     <img src="images/jacket4.png" alt="デモ曲4 ジャケット">
     <h2>再哀</h2>
     <button class="play-btn" data-audio="audio/SAIAI.mp3">再生</button>
+    <div class="progress-container"><div class="progress-bar"></div></div>
     <a href="https://drive.google.com/file/d/1XHbFKKKorBFcwxfLDyqBisbOYY7mocae/view?usp=sharing" target="_blank">ダウンロード</a>
   </div>
 </div>
 
 <script>
-  // 再生用カスタムプレイヤー
   let currentAudio = null;
+  let currentCard = null;
 
-  document.querySelectorAll('.play-btn').forEach(btn => {
+  document.querySelectorAll('.track-card').forEach(card => {
+    const btn = card.querySelector('.play-btn');
+    const progressBar = card.querySelector('.progress-bar');
+    let audio = null;
+
     btn.addEventListener('click', () => {
-      const audioSrc = btn.getAttribute('data-audio');
+      const src = btn.getAttribute('data-audio');
 
-      // 既に再生中の曲がある場合停止
-      if(currentAudio && !currentAudio.paused) {
+      // 前の曲を停止
+      if(currentAudio && !currentAudio.paused){
         currentAudio.pause();
-        currentAudio.currentTime = 0;
-        if(currentAudio.btn) currentAudio.btn.textContent = "再生";
+        currentCard.classList.remove('playing');
       }
 
-      // 新しいAudioオブジェクトを作る
-      const audio = new Audio(audioSrc);
-      audio.btn = btn;
-      audio.play();
-      btn.textContent = "一時停止";
+      // 新しいAudio作成
+      if(!audio || audio.src !== src){
+        audio = new Audio(src);
+        audio.addEventListener('timeupdate', () => {
+          const percent = (audio.currentTime / audio.duration) * 100;
+          progressBar.style.width = percent + '%';
+        });
+        audio.addEventListener('ended', () => {
+          btn.textContent = '再生';
+          progressBar.style.width = '0%';
+          card.classList.remove('playing');
+        });
+      }
+
+      if(audio.paused){
+        audio.play();
+        btn.textContent = '一時停止';
+        card.classList.add('playing');
+      } else {
+        audio.pause();
+        btn.textContent = '再生';
+        card.classList.remove('playing');
+      }
+
       currentAudio = audio;
-
-      // 再生終了でボタン表示を戻す
-      audio.addEventListener('ended', () => {
-        btn.textContent = "再生";
-      });
-
-      // ボタンをもう一度押したら停止
-      btn.onclick = () => {
-        if(!audio.paused){
-          audio.pause();
-          btn.textContent = "再生";
-        } else {
-          audio.play();
-          btn.textContent = "一時停止";
-        }
-      };
+      currentCard = card;
     });
   });
 </script>
